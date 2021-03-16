@@ -65,7 +65,19 @@ func (t *Tsl) parse() error {
 		return err
 	}
 	t.Data = &QualifiedCa{}
-	err = xml.Unmarshal( b, t.Data)
+	err = xml.Unmarshal(b, t.Data)
 	t.logger.Printf("Parsed %d qualified CA from file version %d", len(t.Data.Cas), t.Data.Version)
 	return err
+}
+
+func (t *Tsl) GetCDPMap() map[string]string {
+	m := map[string]string{}
+	for _, ca := range t.Data.Cas {
+		for _, pak := range ca.Paks {
+			for _, key := range pak.Keys {
+				m[key.KeyId] = key.Cdp[0]
+			}
+		}
+	}
+	return m
 }
