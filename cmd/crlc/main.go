@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/WineGecko/crlcollector/pkg/tsl"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 )
 
 //Ссылка на TSL https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml
@@ -38,13 +40,14 @@ func main() {
 func ReverseProxy(t *tsl.Tsl) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		keyId := c.Param("keyId")
-		targetUrl := t.GetCDPMap()[keyId]
-		u, _ := url.Parse(targetUrl)
+		targetUrl := t.GetCDPMap()[strings.ToLower(keyId)]
+		u, _ := url.Parse(targetUrl[0])
 		director := func(req *http.Request) {
-			req = c.Request
 			req.URL = u
+			req.Host = u.Host
 		}
 		proxy := &httputil.ReverseProxy{Director: director}
+		c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.crl", keyId))
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 )
 
 type Tsl struct {
@@ -70,12 +71,17 @@ func (t *Tsl) parse() error {
 	return err
 }
 
-func (t *Tsl) GetCDPMap() map[string]string {
-	m := map[string]string{}
+func (t *Tsl) GetCDPMap() map[string][]string {
+	m := map[string][]string{}
+	if t.Data == nil {
+		return m
+	}
 	for _, ca := range t.Data.Cas {
-		for _, pak := range ca.Paks {
-			for _, key := range pak.Keys {
-				m[key.KeyId] = key.Cdp[0]
+		if ca.Status == Valid {
+			for _, pak := range ca.Paks {
+				for _, key := range pak.Keys {
+					m[strings.ToLower(key.KeyId)] = key.Cdp
+				}
 			}
 		}
 	}
