@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/WineGecko/crlcollector/pkg/tsl"
 	"github.com/gin-gonic/gin"
@@ -13,12 +14,31 @@ import (
 	"time"
 )
 
-//Ссылка на TSL https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml
+type config struct {
+	TslUrl         *string
+	Filename       *string
+	UpdateInterval *time.Duration
+	Port           *string
+}
 
 func main() {
 	logger := log.New(os.Stdout, "crlc: ", log.Lshortfile)
+	c := &config{
+		TslUrl:         flag.String("tsllink", "https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml", "TSL url"),
+		Filename:       flag.String("filename", "tsl.xml", "TSL filename"),
+		UpdateInterval: flag.Duration("update", 12*time.Hour, "TSL file update interval"),
+		Port:           flag.String("listen", ":8080", "Address:port for API"),
+	}
+	flag.Parse()
 
-	t, err := tsl.NewTSL("https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml", "tsl.xml", logger)
+	t, err := tsl.NewTSL(*c.TslUrl, *c.Filename, logger)
+
+	go func() {
+		err := t.Update(*c.UpdateInterval)
+		if err != nil {
+			log.Printf("Unable update TSL. %s", err)
+		}
+	}()
 
 	if err != nil {
 		log.Fatal(err)
@@ -36,7 +56,7 @@ func main() {
 	})
 
 	s := &http.Server{
-		Addr:         ":8080",
+		Addr:         *c.Port,
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,

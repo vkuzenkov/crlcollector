@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 type Tsl struct {
@@ -34,6 +35,7 @@ func NewTSL(tslUrl, filename string, logger *log.Logger) (tsl *Tsl, err error) {
 			return
 		}
 		err = tsl.parse()
+		tsl.logger.Printf("Parsed %d qualified CA from file version %d", len(tsl.Data.Cas), tsl.Data.Version)
 	}()
 
 	if err != nil {
@@ -60,15 +62,30 @@ func (t *Tsl) Download() error {
 	return err
 }
 
-func (t *Tsl) parse() error {
-	b, err := ioutil.ReadFile(t.filename)
-	if err != nil {
-		return err
+func (t *Tsl) Update(interval time.Duration) error {
+	timer := time.NewTicker(interval)
+	for {
+		select {
+		case <-timer.C:
+			oldVersion := t.Data.Version
+			t.logger.Printf("Starting update TSL current version: %d", oldVersion)
+			err := t.Download()
+			if err != nil {
+				return err
+			}
+			oldData := t.Data
+			err = t.parse()
+			if err != nil {
+				t.Data = oldData
+				return err
+			}
+			if t.Data.Version == oldVersion {
+				t.logger.Println("File up to date")
+			} else {
+				t.logger.Printf("Update complete, new version: %d", t.Data.Version)
+			}
+		}
 	}
-	t.Data = &QualifiedCa{}
-	err = xml.Unmarshal(b, t.Data)
-	t.logger.Printf("Parsed %d qualified CA from file version %d", len(t.Data.Cas), t.Data.Version)
-	return err
 }
 
 func (t *Tsl) GetCDPMap() map[string][]string {
@@ -86,4 +103,14 @@ func (t *Tsl) GetCDPMap() map[string][]string {
 		}
 	}
 	return m
+}
+
+func (t *Tsl) parse() error {
+	b, err := ioutil.ReadFile(t.filename)
+	if err != nil {
+		return err
+	}
+	t.Data = &QualifiedCa{}
+	err = xml.Unmarshal(b, t.Data)
+	return err
 }
