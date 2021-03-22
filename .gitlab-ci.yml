@@ -1,0 +1,24 @@
+image: golang:1.15-alpine
+
+.go-cache:
+  variables:
+    GOPATH: $CI_PROJECT_DIR/.go
+  before_script:
+    - mkdir -p .go
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .go/pkg/mod/
+  policy: pull-push
+
+
+build-app:
+  extends: .go-cache
+  stage: build
+  script:
+    - go install ./cmd/crlc
+  artifacts:
+    when: always
+    paths:
+      - .go/bin/crlc
