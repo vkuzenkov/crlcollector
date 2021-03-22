@@ -9,10 +9,12 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Tsl struct {
+	mu       sync.Mutex
 	url      *url.URL
 	filename string
 	Data     *QualifiedCa
@@ -35,7 +37,7 @@ func NewTSL(tslUrl, filename string, logger *log.Logger) (tsl *Tsl, err error) {
 			return
 		}
 		err = tsl.parse()
-		tsl.logger.Printf("Parsed %d qualified CA from file version %d", len(tsl.Data.Cas), tsl.Data.Version)
+		tsl.logger.Printf("✅ Parsed %d qualified CA from file version %d", len(tsl.Data.Cas), tsl.Data.Version)
 	}()
 
 	if err != nil {
@@ -50,7 +52,7 @@ func (t *Tsl) Download() error {
 		return err
 	}
 	defer resp.Body.Close()
-	t.logger.Printf("Download TSL file complete with status: %d", resp.StatusCode)
+	t.logger.Printf("✅ Download TSL file complete with status: %d", resp.StatusCode)
 
 	out, err := os.Create(t.filename)
 	if err != nil {
@@ -80,7 +82,7 @@ func (t *Tsl) Update(interval time.Duration) error {
 				return err
 			}
 			if t.Data.Version == oldVersion {
-				t.logger.Println("File up to date")
+				t.logger.Println("❕ File up to date")
 			} else {
 				t.logger.Printf("Update complete, new version: %d", t.Data.Version)
 			}
@@ -106,11 +108,13 @@ func (t *Tsl) GetCDPMap() map[string][]string {
 }
 
 func (t *Tsl) parse() error {
+	t.mu.Lock()
 	b, err := ioutil.ReadFile(t.filename)
 	if err != nil {
 		return err
 	}
 	t.Data = &QualifiedCa{}
 	err = xml.Unmarshal(b, t.Data)
+	defer t.mu.Unlock()
 	return err
 }

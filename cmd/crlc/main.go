@@ -36,7 +36,7 @@ func main() {
 	go func() {
 		err := t.Update(*c.UpdateInterval)
 		if err != nil {
-			log.Printf("Unable update TSL. %s", err)
+			log.Printf("❌ Unable update TSL. %s", err)
 		}
 	}()
 
