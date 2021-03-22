@@ -16,6 +16,9 @@ cache:
 build-app:
   extends: .go-cache
   stage: build
+  variables:
+    GOOS: linux
+    GOARCH: amd64
   script:
     - go install ./cmd/crlc
   artifacts:
