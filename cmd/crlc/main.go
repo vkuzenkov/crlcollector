@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/WineGecko/crlcollector/pkg/tsl"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -12,6 +10,9 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/WineGecko/crlcollector/pkg/tsl"
+	"github.com/gin-gonic/gin"
 )
 
 type config struct {
@@ -47,8 +48,18 @@ func main() {
 	r := gin.New()
 
 	r.GET("/crl/:keyId", ReverseProxy(t, logger))
+	r.GET("/cer/:keyId", func(c *gin.Context) {
+		keyId := c.Param("keyId")
+		targetRoot := t.GetRootMap()[strings.ToLower(keyId)]
+		if len(targetRoot) == 0 {
+			c.String(http.StatusNoContent, "No valid root certs for key: %s", keyId)
+		}
+		c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.cer", keyId))
+		c.Data(http.StatusOK, "application/pkix-cert", targetRoot[0].ToDER())
+	})
 	r.GET("/debug", func(c *gin.Context) {
-		c.JSON(http.StatusOK, t.GetCDPMap())
+		// c.JSON(http.StatusOK, t.GetCDPMap())
+		c.JSON(http.StatusOK, t.GetRootMap())
 	})
 
 	r.NoRoute(func(c *gin.Context) {

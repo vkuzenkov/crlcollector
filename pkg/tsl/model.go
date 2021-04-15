@@ -1,5 +1,10 @@
 package tsl
 
+import (
+	"encoding/base64"
+	"time"
+)
+
 type QualifiedCa struct {
 	Version int  `xml:"Версия"`
 	Cas     []Ca `xml:"УдостоверяющийЦентр"`
@@ -26,6 +31,22 @@ type Pak struct {
 }
 
 type Key struct {
-	KeyId string   `xml:"ИдентификаторКлюча"`
-	Cdp   []string `xml:"АдресаСписковОтзыва>Адрес"`
+	KeyId     string     `xml:"ИдентификаторКлюча"`
+	Cdp       []string   `xml:"АдресаСписковОтзыва>Адрес"`
+	RootCerts []RootCert `xml:"Сертификаты>ДанныеСертификата"`
+}
+
+type RootCert struct {
+	Thumbprint   string     `xml:"Отпечаток"`
+	SerialNumber string     `xml:"СерийныйНомер"`
+	NotAfter     *time.Time `xml:"ПериодДействияДо"`
+	Base64Str    string     `xml:"Данные"`
+}
+
+func (r *RootCert) ToDER() []byte {
+	b, err := base64.StdEncoding.DecodeString(r.Base64Str)
+	if err != nil {
+		return nil
+	}
+	return b
 }
