@@ -107,6 +107,29 @@ func (t *Tsl) GetCDPMap() map[string][]string {
 	return m
 }
 
+func (t *Tsl) GetRootMap() map[string][]RootCert {
+	m := map[string][]RootCert{}
+	if t.Data == nil {
+		return m
+	}
+	for _, ca := range t.Data.Cas {
+		if ca.Status == Valid {
+			for _, pak := range ca.Paks {
+				for _, key := range pak.Keys {
+					for _, rootcert := range key.RootCerts {
+						validcerts := []RootCert{}
+						if time.Until(*rootcert.NotAfter) > 0 {
+							validcerts = append(validcerts, rootcert)
+						}
+						m[strings.ToLower(key.KeyId)] = validcerts
+					}
+				}
+			}
+		}
+	}
+	return m
+}
+
 func (t *Tsl) parse() error {
 	t.mu.Lock()
 	b, err := ioutil.ReadFile(t.filename)
