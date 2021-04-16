@@ -18,3 +18,5 @@
 #### GET /crl/:keyid
 Получить CRL для УЦ с корневым сертификатов со SKID keyid. keyid корневого сертификата УЦ можно определить в расширении [Authority Key Identifier](https://www.alvestrand.no/objectid/2.5.29.35.html) (OID 2.5.29.35) пользовательского сертификата.
 
+#### GET /cer/:keyid
+Получить корневой сертификат для УЦ со SKID keyid.
