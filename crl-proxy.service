@@ -1,0 +1,10 @@
+[Unit]
+Description=CRL proxy service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/crlc -filename /tmp/tsl.xml 2>&1 > /var/log/crl_proxy.log
+
+[Install]
+WantedBy=default.target
