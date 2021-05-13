@@ -1,6 +1,7 @@
 package tsl
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"io/ioutil"
@@ -14,14 +15,16 @@ import (
 )
 
 type Tsl struct {
-	mu       sync.Mutex
-	url      *url.URL
-	filename string
-	Data     *QualifiedCa
-	logger   *log.Logger
+	mu                 sync.Mutex
+	url                *url.URL
+	filename           string
+	additionalCaConfig string
+	Data               *QualifiedCa
+	AdditionalData     *AdditionalCaConfig
+	logger             *log.Logger
 }
 
-func NewTSL(tslUrl, filename string, logger *log.Logger) (tsl *Tsl, err error) {
+func NewTSL(tslUrl, filename, additionalCaConfig string, logger *log.Logger) (tsl *Tsl, err error) {
 	tsl = &Tsl{
 		filename: filename,
 		logger:   logger,
@@ -38,6 +41,8 @@ func NewTSL(tslUrl, filename string, logger *log.Logger) (tsl *Tsl, err error) {
 		}
 		err = tsl.parse()
 		tsl.logger.Printf("✅ Parsed %d qualified CA from file version %d", len(tsl.Data.Cas), tsl.Data.Version)
+		err = tsl.parseAdditional()
+		tsl.logger.Printf("✅ Parsed %d CA from additional config", len(tsl.AdditionalData.Ca))
 	}()
 
 	if err != nil {
@@ -104,6 +109,12 @@ func (t *Tsl) GetCDPMap() map[string][]string {
 			}
 		}
 	}
+	if t.AdditionalData == nil {
+		return m
+	}
+	for _, aca := range t.AdditionalData.Ca {
+		m[strings.ToLower(aca.KeyId)] = aca.Cdp
+	}
 	return m
 }
 
@@ -127,6 +138,17 @@ func (t *Tsl) GetRootMap() map[string][]RootCert {
 			}
 		}
 	}
+	if t.AdditionalData == nil {
+		return m
+	}
+	for _, aca := range t.AdditionalData.Ca {
+		certs := []RootCert{}
+		rootCert := RootCert{
+			Base64Str: aca.Base64Str,
+		}
+		certs = append(certs, rootCert)
+		m[strings.ToLower(aca.KeyId)] = certs
+	}
 	return m
 }
 
@@ -138,6 +160,18 @@ func (t *Tsl) parse() error {
 	}
 	t.Data = &QualifiedCa{}
 	err = xml.Unmarshal(b, t.Data)
+	defer t.mu.Unlock()
+	return err
+}
+
+func (t *Tsl) parseAdditional() error {
+	t.mu.Lock()
+	b, err := ioutil.ReadFile(t.additionalCaConfig)
+	if err != nil {
+		return err
+	}
+	t.AdditionalData = &AdditionalCaConfig{}
+	err = json.Unmarshal(b, t.AdditionalData)
 	defer t.mu.Unlock()
 	return err
 }

@@ -16,23 +16,25 @@ import (
 )
 
 type config struct {
-	TslUrl         *string
-	Filename       *string
-	UpdateInterval *time.Duration
-	Port           *string
+	TslUrl             *string
+	Filename           *string
+	UpdateInterval     *time.Duration
+	AdditionalCaConfig *string
+	Port               *string
 }
 
 func main() {
 	logger := log.New(os.Stdout, "crlc: ", log.Lshortfile)
 	c := &config{
-		TslUrl:         flag.String("tsllink", "https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml", "TSL url"),
-		Filename:       flag.String("filename", "tsl.xml", "TSL filename"),
-		UpdateInterval: flag.Duration("update", 12*time.Hour, "TSL file update interval"),
-		Port:           flag.String("listen", ":8080", "Address:port for API"),
+		TslUrl:             flag.String("tsllink", "https://e-trust.gosuslugi.ru/app/scc/portal/api/v1/portal/ca/getxml", "TSL url"),
+		Filename:           flag.String("filename", "tsl.xml", "TSL filename"),
+		UpdateInterval:     flag.Duration("update", 12*time.Hour, "TSL file update interval"),
+		AdditionalCaConfig: flag.String("additionalca", "config.json", "JSON with additional CA info"),
+		Port:               flag.String("listen", ":8080", "Address:port for API"),
 	}
 	flag.Parse()
 
-	t, err := tsl.NewTSL(*c.TslUrl, *c.Filename, logger)
+	t, err := tsl.NewTSL(*c.TslUrl, *c.Filename, *c.AdditionalCaConfig, logger)
 
 	go func() {
 		err := t.Update(*c.UpdateInterval)

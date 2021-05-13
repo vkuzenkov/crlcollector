@@ -43,6 +43,16 @@ type RootCert struct {
 	Base64Str    string     `xml:"Данные"`
 }
 
+type AdditionalCaConfig struct {
+	Ca []AdditionalCa
+}
+
+type AdditionalCa struct {
+	KeyId     string   `json:"keyId"`
+	Cdp       []string `json:"cdp"`
+	Base64Str string   `json:"base64Str"`
+}
+
 func (r *RootCert) ToDER() []byte {
 	b, err := base64.StdEncoding.DecodeString(r.Base64Str)
 	if err != nil {
